@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generátor etiket</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/pkoretic/pdf417-generator@master/lib/libbcmath.js" type="text/javascript"></script>
+    <script src="https://cdn.jsdelivr.net/gh/pkoretic/pdf417-generator@master/lib/bcmath.js" type="text/javascript"></script>
+    <script src="https://cdn.jsdelivr.net/gh/pkoretic/pdf417-generator@master/lib/pdf417.js" type="text/javascript"></script>
+   <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Generátor etiket</h1>
+    <div class="tabs">
+        <div class="tab active" data-tab="etikety">Generátor etiket (EAN)</div>
+        <div class="tab" data-tab="tabulky">Generátor tabulkových etiket</div>
+    </div>
+    <div id="etikety" class="tab-content active">
+        <p>Zde se generují etikety pro produkty bez EAN kodu.</p>
+        <p style="color:red">Pozor každý produkt musí mít svůj kod. (MAX 9999)</p>
+        <form id="etiketyForm">
+            <label>
+                Prefix:
+                <input type="text" id="prefix" value="CBDUX-" required>
+            </label>
+            <label>
+                Suffix:
+                <input type="text" id="suffix" value="-SRO" required>
+            </label>
+            <label>
+                Název produktu:
+                   <input type="text" id="productLabelName" value="Pojmenuj arch etiket pro lepší rozpoznání" required>
+               </label>
+            <label>
+             Kod produktu:
+                <input type="number" id="startValue" value="1" min="1" max="9999" required>
+            </label>
+            <button type="button" id="generateBtn">Generovat ETIKETY</button>
+        </form>
+        <canvas id="barcode"></canvas>
+        
+        <h3>Náhled etikety</h3>
+        <div id="eanLabelPreview" style="width: 48.5mm; height: 25.4mm; border: 1px solid #000; margin: 20px auto; padding: 5px; box-sizing: border-box; overflow: hidden;">
+            <div id="eanLabelCode" style="font-size: 8px; margin-top: 10px;"></div>
+            <canvas id="eanBarcode" style="display: block; margin: 5px auto;"></canvas>
+        </div>
+    </div>
+    <div id="tabulky" class="tab-content">
+        <!-- Obsah pro generátor tabulkových etiket -->
+        <p>Zde bude generátor tabulkových etiket.</p>
+        <form id="tabulkyForm">
+            <label>
+                Název produktu:
+                <input value="Název" type="text" id="productName" maxlength="16" required>
+            </label>
+            <label for="labelCount">Počet etiket (40 = 1 A4 list):
+                <input value="40" type="number" id="labelCount" min="1" max="40" required>
+            </label>
+            <label for="printStart">Počáteční číslo pro tisk:</label>
+            <input type="number" id="printStart" value="1" min="1" required>
+            <table border="1" style="margin: 0 auto;">
+                <tr>
+                    <th><input type="text" id="header1" value="1g+"></th>
+                    <th><input type="text" id="header2" value="2g+"></th>
+                    <th><input type="text" id="header3" value="5g+"></th>
+                    <th><input type="text" id="header4" value="10g+"></th>
+                </tr>
+                <tr>
+                    <td><input type="text" id="price1" value="200Kč"></td>
+                    <td><input type="text" id="price2" value="350Kč"></td>
+                    <td><input type="text" id="price3" value="600Kč"></td>
+                    <td><input type="text" id="price4" value="1150Kč"></td>
+                </tr>
+            </table>
+            <br>
+
+            <button type="button" id="generateTableBtn">Generovat TABULKOVÉ ETIKETY</button>
+        </form>
+        <canvas id="tableBarcode" style="display: none;"></canvas>
+        
+        <h3>Náhled etikety</h3>
+        <div id="labelPreview">
+            <div id="logoDiv">
+            <img src="data:image/png;base64,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" 
+            alt="etiketa" style="width: 20px;" id="logoID">
+            </div>
+           <div id="labelProductName" style="font-weight: bold;">
+            </div>
+            <table id="labelTable" border="1">
+                <tr>
+                    <th id="labelHeader1"></th>
+                    <th id="labelHeader2"></th>
+                    <th id="labelHeader3"></th>
+                    <th id="labelHeader4"></th>
+                </tr>
+                <tr>
+                    <td id="labelPrice1"></td>
+                    <td id="labelPrice2"></td>
+                    <td id="labelPrice3"></td>
+                    <td id="labelPrice4"></td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    <script src="label-generator.js"></script>
+</body>
+</html>
